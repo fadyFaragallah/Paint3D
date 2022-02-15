@@ -38,11 +38,8 @@ file(GLOB_RECURSE SOURCES
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_AUTOUIC_SEARCH_PATHS} ${FORMS_DIR})
 
 # Add the executable
-if (WIN32) 
-    add_executable(Paint WIN32 ${SOURCES})
-elseif(UNIX)
-    add_executable(Paint ${SOURCES})
-endif()
+add_executable(Paint ${SOURCES})
+
 
 # Add the target includes
 target_include_directories(Paint PRIVATE ${FORMS_DIR})
