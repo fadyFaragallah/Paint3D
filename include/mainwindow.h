@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+#include<vtkNew.h>
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -17,5 +19,13 @@ public:
 
 private:
     Ui::MainWindow *ui;
+	vtkNew<vtkRenderer> renderer;
+	vtkNew<vtkRenderWindow> renderWindow;
+	vtkNew<vtkRenderWindowInteractor> interactor;
+
+public slots:
+	void onDrawSphereClick();
+	void onDrawCubeClick();
+	void onDrawConeClick();
 };
 #endif // MAINWINDOW_H
