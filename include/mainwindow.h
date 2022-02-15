@@ -3,7 +3,10 @@
 
 #include <QMainWindow>
 
-#include<vtkNew.h>
+#include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkRenderer.h>
+#include <QVTKInteractor.h>
+#include <vtkInteractorStyle.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -19,9 +22,10 @@ public:
 
 private:
     Ui::MainWindow *ui;
-	vtkNew<vtkRenderer> renderer;
-	vtkNew<vtkRenderWindow> renderWindow;
-	vtkNew<vtkRenderWindowInteractor> interactor;
+	vtkSmartPointer<vtkGenericOpenGLRenderWindow> renderWindow;
+	vtkSmartPointer<vtkRenderer> renderer;
+	vtkSmartPointer<QVTKInteractor> interactor;
+	vtkSmartPointer<vtkInteractorStyle> interactorStyle;
 
 public slots:
 	void onDrawSphereClick();

@@ -27,7 +27,7 @@
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
-
+#include <vtkCubeSource.h>
 // cone
 #include <vtkConeSource.h>
 #include <vtkNew.h>
@@ -42,12 +42,22 @@
 #include <vtkRenderer.h>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+    : QMainWindow(parent) , 
+	ui(new Ui::MainWindow) ,
+	renderWindow(vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New()),
+	renderer(vtkSmartPointer<vtkRenderer>::New()),
+	interactor(vtkSmartPointer<QVTKInteractor>::New()),
+	interactorStyle(vtkSmartPointer<vtkInteractorStyle>::New())
 {
+	// setup UI
     ui->setupUi(this);
-
-
+	// Set up the rendering
+	renderWindow->AddRenderer(renderer);
+	renderWindow->SetInteractor(interactor);
+	ui->openGLWidget->SetRenderWindow(renderWindow);
+	interactor->SetInteractorStyle(interactorStyle);
+	interactor->Initialize();
+	
 	// Set the UI connections
 	QObject::connect(ui->sphereButton, &QPushButton::clicked,
 		this, &MainWindow::onDrawSphereClick);
@@ -64,141 +74,72 @@ MainWindow::~MainWindow()
 
 void MainWindow::onDrawSphereClick()
 {
-	vtkNew<vtkNamedColors> colors;
+	// Create sphere
+	vtkSmartPointer<vtkSphereSource> sphereSource =
+		vtkSmartPointer<vtkSphereSource>::New();
+	sphereSource->SetRadius(5);
+	sphereSource->Update();
 
-	// Create a sphere
-	vtkNew<vtkSphereSource> sphereSource;
-	sphereSource->SetCenter(0.0, 0.0, 0.0);
-	sphereSource->SetRadius(5.0);
-	// Make the surface smooth.
-	sphereSource->SetPhiResolution(100);
-	sphereSource->SetThetaResolution(100);
+	// Create the actor where the sphere is rendered
+	vtkSmartPointer<vtkPolyDataMapper> sphereMapper =
+		vtkSmartPointer<vtkPolyDataMapper>::New();
+	sphereMapper->SetInputData(sphereSource->GetOutput());
 
-	vtkNew<vtkPolyDataMapper> mapper;
-	mapper->SetInputConnection(sphereSource->GetOutputPort());
+	vtkSmartPointer<vtkActor> sphere = vtkSmartPointer<vtkActor>::New();
+	sphere->SetMapper(sphereMapper);
 
-	vtkNew<vtkActor> actor;
-	actor->SetMapper(mapper);
-	actor->GetProperty()->SetColor(colors->GetColor3d("Cornsilk").GetData());
-	vtkNew<vtkRenderer> renderer;
-	vtkNew<vtkRenderWindow> renderWindow;
-	renderWindow->SetWindowName("Sphere");
-	renderWindow->AddRenderer(renderer);
-	vtkNew<vtkRenderWindowInteractor> renderWindowInteractor;
-	renderWindowInteractor->SetRenderWindow(renderWindow);
-
-	renderer->AddActor(actor);
-	renderer->SetBackground(colors->GetColor3d("DarkGreen").GetData());
-
+	// Add the sphere actor to the OpenGL
+	renderer->RemoveAllViewProps();
+	renderer->AddViewProp(sphere);
+	renderer->ResetCamera();
 	renderWindow->Render();
-	renderWindowInteractor->Start();
 }
 void MainWindow::onDrawCubeClick()
 {
-	vtkNew<vtkNamedColors> colors;
+	// Create cube
+	vtkSmartPointer<vtkCubeSource> cubeSource =
+		vtkSmartPointer<vtkCubeSource>::New();
+	cubeSource->Update();
 
-	std::array<std::array<double, 3>, 8> pts = { {{{0, 0, 0}},
-												 {{1, 0, 0}},
-												 {{1, 1, 0}},
-												 {{0, 1, 0}},
-												 {{0, 0, 1}},
-												 {{1, 0, 1}},
-												 {{1, 1, 1}},
-												 {{0, 1, 1}}} };
-	// The ordering of the corner points on each face.
-	std::array<std::array<vtkIdType, 4>, 6> ordering = { {{{0, 3, 2, 1}},
-														 {{4, 5, 6, 7}},
-														 {{0, 1, 5, 4}},
-														 {{1, 2, 6, 5}},
-														 {{2, 3, 7, 6}},
-														 {{3, 0, 4, 7}}} };
+	// Create the actor where the cube is rendered
+	vtkSmartPointer<vtkPolyDataMapper> cubeMapper =
+		vtkSmartPointer<vtkPolyDataMapper>::New();
+	cubeMapper->SetInputData(cubeSource->GetOutput());
 
-	// We'll create the building blocks of polydata including data attributes.
-	vtkNew<vtkPolyData> cube;
-	vtkNew<vtkPoints> points;
-	vtkNew<vtkCellArray> polys;
-	vtkNew<vtkFloatArray> scalars;
+	vtkSmartPointer<vtkActor> cube = vtkSmartPointer<vtkActor>::New();
+	cube->SetMapper(cubeMapper);
 
-	// Load the point, cell, and data attributes.
-	for (auto i = 0ul; i < pts.size(); ++i)
-	{
-		points->InsertPoint(i, pts[i].data());
-		scalars->InsertTuple1(i, i);
-	}
-	for (auto&& i : ordering)
-	{
-		polys->InsertNextCell(vtkIdType(i.size()), i.data());
-	}
-
-	// We now assign the pieces to the vtkPolyData.
-	cube->SetPoints(points);
-	cube->SetPolys(polys);
-	cube->GetPointData()->SetScalars(scalars);
-
-	// Now we'll look at it.
-	vtkNew<vtkPolyDataMapper> cubeMapper;
-	cubeMapper->SetInputData(cube);
-	cubeMapper->SetScalarRange(cube->GetScalarRange());
-	vtkNew<vtkActor> cubeActor;
-	cubeActor->SetMapper(cubeMapper);
-
-	// The usual rendering stuff.
-	vtkNew<vtkCamera> camera;
-	camera->SetPosition(1, 1, 1);
-	camera->SetFocalPoint(0, 0, 0);
-
-	vtkNew<vtkRenderer> renderer;
-	vtkNew<vtkRenderWindow> renWin;
-	renWin->AddRenderer(renderer);
-	renWin->SetWindowName("Cube");
-
-	vtkNew<vtkRenderWindowInteractor> iren;
-	iren->SetRenderWindow(renWin);
-
-	renderer->AddActor(cubeActor);
-	renderer->SetActiveCamera(camera);
+	// Add the sphere actor to the OpenGL
+	renderer->RemoveAllViewProps();
+	renderer->AddViewProp(cube);
 	renderer->ResetCamera();
-	renderer->SetBackground(colors->GetColor3d("Cornsilk").GetData());
-
-	renWin->SetSize(600, 600);
-
-	// interact with data
-	renWin->Render();
-	iren->Start();
+	renderer->GetActiveCamera()->Azimuth(30);
+	renderer->GetActiveCamera()->Elevation(30);
+	renderWindow->Render();
 
 
 }
 void MainWindow::onDrawConeClick()
 {
-	vtkNew<vtkNamedColors> colors;
-
-	// Create a cone
-	vtkNew<vtkConeSource> coneSource;
+	// Create cube
+	vtkSmartPointer<vtkConeSource> coneSource =
+		vtkSmartPointer<vtkConeSource>::New();
 	coneSource->Update();
 
-	// Create a mapper and actor
-	vtkNew<vtkPolyDataMapper> mapper;
-	mapper->SetInputConnection(coneSource->GetOutputPort());
+	// Create the actor where the cone is rendered
+	vtkSmartPointer<vtkPolyDataMapper> coneMapper =
+		vtkSmartPointer<vtkPolyDataMapper>::New();
+	coneMapper->SetInputData(coneSource->GetOutput());
 
-	vtkNew<vtkActor> actor;
-	actor->SetMapper(mapper);
-	actor->GetProperty()->SetDiffuseColor(colors->GetColor3d("bisque").GetData());
+	vtkSmartPointer<vtkActor> cone = vtkSmartPointer<vtkActor>::New();
+	cone->SetMapper(coneMapper);
 
-	// Create a renderer, render window, and interactor
-	vtkNew<vtkRenderer> renderer;
-	vtkNew<vtkRenderWindow> renderWindow;
-	renderWindow->AddRenderer(renderer);
-	renderWindow->SetSize(640, 480);
-
-	vtkNew<vtkRenderWindowInteractor> renderWindowInteractor;
-	renderWindowInteractor->SetRenderWindow(renderWindow);
-	// Add the actors to the scene
-	renderer->AddActor(actor);
-	renderer->SetBackground(colors->GetColor3d("Salmon").GetData());
-
-	// Render and interact
-	renderWindow->SetWindowName("Cone");
+	// Add the sphere actor to the OpenGL
+	renderer->RemoveAllViewProps();
+	renderer->AddViewProp(cone);
+	renderer->ResetCamera();
+	renderer->GetActiveCamera()->Azimuth(30);
+	renderer->GetActiveCamera()->Elevation(30);
 	renderWindow->Render();
-	renderWindowInteractor->Start();
 }
 
