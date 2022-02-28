@@ -25,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent)
 	// Set up the rendering
 	renderWindow->AddRenderer(renderer);
 	renderWindow->SetInteractor(interactor);
-	ui->openGLWidget->SetRenderWindow(renderWindow);
+	ui->openGLWidget->setRenderWindow(renderWindow);
 	interactor->SetInteractorStyle(interactorStyle);
 	interactor->Initialize();
 	
